@@ -10,6 +10,7 @@ export interface Product {
   old_price: number | null
   cost_price: number
   image_url: string | null
+  images: string[] | null
   sizes: string[]
   in_stock: boolean
   stock_quantity: number

@@ -71,6 +71,13 @@ export default function Catalog() {
   const filterLabel = filter.team || (filter.category ? CATEGORIES.find(c => c.key === filter.category)?.label : null)
 
   return (
+    <>
+      {/* === HAMBURGER FIXO (fora do overflow container) === */}
+      <button onClick={() => setMenuOpen(true)}
+        className="fixed top-3 right-3 z-50 w-10 h-10 rounded-full bg-bg/70 backdrop-blur-sm flex items-center justify-center text-text hover:bg-bg/90 transition-colors">
+        <Menu className="w-5 h-5" />
+      </button>
+
     <div className="min-h-screen bg-bg flex justify-center">
       <div className="w-full max-w-[430px] min-h-screen bg-bg flex flex-col relative pb-[72px]">
 
@@ -79,7 +86,7 @@ export default function Catalog() {
           <div className="h-[200px] w-full relative overflow-hidden bg-card">
             {banners.length > 0 ? banners.map((url, i) => (
               <img key={i} src={url} alt=""
-                className="absolute inset-0 w-full h-full object-contain bg-black/40 transition-opacity duration-700"
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
                 style={{ opacity: i === bannerIdx ? 1 : 0 }} />
             )) : (
               <div className="w-full h-full flex items-center justify-center"
@@ -88,12 +95,6 @@ export default function Catalog() {
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-bg/90 via-bg/30 to-transparent" />
-
-            {/* Hamburger */}
-            <button onClick={() => setMenuOpen(true)}
-              className="absolute top-3 right-3 z-20 w-10 h-10 rounded-full bg-bg/70 backdrop-blur-sm flex items-center justify-center text-text hover:bg-bg/90 transition-colors">
-              <Menu className="w-5 h-5" />
-            </button>
 
             {banners.length > 1 && (
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
@@ -104,11 +105,11 @@ export default function Catalog() {
             )}
           </div>
 
-          <div className="absolute left-1/2 -translate-x-1/2 -bottom-[48px] z-10">
-            <div className="w-[96px] h-[96px] rounded-full p-[3px] bg-bg shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
+          <div className="absolute left-1/2 -translate-x-1/2 -bottom-[56px] z-10">
+            <div className="w-[120px] h-[120px] rounded-full p-[3px] bg-bg shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
               <div className="w-full h-full rounded-full border-[2.5px] border-gold overflow-hidden bg-card">
                 <img
-                  src={config?.profile_image || 'https://via.placeholder.com/96x96/1A1A1A/D4A017?text=D'}
+                  src={config?.profile_image || 'https://via.placeholder.com/120x120/1A1A1A/D4A017?text=D'}
                   alt={config?.owner_name || 'Diego'}
                   className="w-full h-full object-cover"
                 />
@@ -118,7 +119,7 @@ export default function Catalog() {
         </section>
 
         {/* === PERFIL === */}
-        <section className="px-5 text-center mt-[56px]">
+        <section className="px-5 text-center mt-[68px]">
           <h2 className="font-bold text-[20px] text-text tracking-tight leading-tight">
             SOU FANÁTICO
           </h2>
@@ -178,7 +179,7 @@ export default function Catalog() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por time ou camisa..."
-              className="w-full h-[42px] pl-9 pr-3 rounded-xl bg-card border border-border text-text placeholder-muted text-[13px] focus:outline-none focus:border-gold transition-colors"
+              className="w-full h-[42px] pl-9 pr-3 rounded-xl bg-card border border-border text-text placeholder-muted text-[16px] focus:outline-none focus:border-gold transition-colors"
             />
           </div>
 
@@ -251,84 +252,74 @@ export default function Catalog() {
           </div>
         </footer>
 
-        {/* === MENU DRAWER === */}
-        {menuOpen && (
-          <div className="fixed inset-0 z-[60] flex justify-center">
-            <div className="w-full max-w-[430px] relative">
-              <div className="absolute inset-0 bg-black/50" onClick={() => { setMenuOpen(false); setExpanded(null) }} />
-              <div className="absolute top-0 left-0 w-[80%] max-w-[320px] h-full bg-card animate-slide-in overflow-y-auto">
-                {/* Header do menu */}
-                <div className="bg-gold/90 px-4 py-4 flex items-center justify-between">
-                  <h2 className="font-bold text-[18px] text-bg">SOU FANÁTICO</h2>
-                  <button onClick={() => { setMenuOpen(false); setExpanded(null) }}
-                    className="w-8 h-8 rounded-full bg-bg/20 flex items-center justify-center text-bg">
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Items */}
-                <div className="py-2">
-                  {/* Início */}
-                  <button onClick={goHome}
-                    className={`w-full px-5 py-3.5 text-left text-[15px] font-medium transition-colors ${
-                      !filter.category ? 'text-gold bg-gold/10' : 'text-text hover:bg-elevated'
-                    }`}>
-                    Início
-                  </button>
-
-                  <div className="h-px bg-border/30 mx-4" />
-
-                  {/* Categorias */}
-                  {CATEGORIES.map(cat => {
-                    const teams = teamsByCategory(cat.key)
-                    const isExpanded = expanded === cat.key
-
-                    return (
-                      <div key={cat.key}>
-                        <button
-                          onClick={() => {
-                            if (cat.expandable && teams.length > 0) {
-                              setExpanded(isExpanded ? null : cat.key)
-                            } else {
-                              selectCategory(cat.key)
-                            }
-                          }}
-                          className={`w-full px-5 py-3.5 flex items-center justify-between text-[15px] font-medium transition-colors ${
-                            filter.category === cat.key && !filter.team ? 'text-gold bg-gold/10' : 'text-text hover:bg-elevated'
-                          }`}>
-                          <span>{cat.label}</span>
-                          {cat.expandable && teams.length > 0 && (
-                            isExpanded ? <ChevronDown className="w-4 h-4 text-muted" /> : <ChevronRight className="w-4 h-4 text-muted" />
-                          )}
-                        </button>
-
-                        {/* Sub-items: times */}
-                        {isExpanded && teams.map(team => (
-                          <button key={team} onClick={() => selectTeam(cat.key, team)}
-                            className={`w-full px-8 py-2.5 text-left text-[14px] transition-colors ${
-                              filter.team === team ? 'text-gold bg-gold/10 font-medium' : 'text-muted hover:text-text hover:bg-elevated'
-                            }`}>
-                            {team}
-                          </button>
-                        ))}
-
-                        {/* Ver todos da categoria */}
-                        {isExpanded && (
-                          <button onClick={() => selectCategory(cat.key)}
-                            className="w-full px-8 py-2.5 text-left text-[13px] text-gold hover:bg-elevated transition-colors">
-                            Ver todos ({products.filter(p => p.category === cat.key).length})
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
+
+    {/* === MENU DRAWER (fora do overflow container) === */}
+    {menuOpen && (
+      <div className="fixed inset-0 z-[60] flex justify-center">
+        <div className="w-full max-w-[430px] relative">
+          <div className="absolute inset-0 bg-black/50" onClick={() => { setMenuOpen(false); setExpanded(null) }} />
+          <div className="absolute top-0 left-0 w-[80%] max-w-[320px] h-full bg-card animate-slide-in overflow-y-auto">
+            <div className="bg-gold/90 px-4 py-4 flex items-center justify-between">
+              <h2 className="font-bold text-[18px] text-bg">SOU FANÁTICO</h2>
+              <button onClick={() => { setMenuOpen(false); setExpanded(null) }}
+                className="w-8 h-8 rounded-full bg-bg/20 flex items-center justify-center text-bg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="py-2">
+              <button onClick={goHome}
+                className={`w-full px-5 py-3.5 text-left text-[15px] font-medium transition-colors ${
+                  !filter.category ? 'text-gold bg-gold/10' : 'text-text hover:bg-elevated'
+                }`}>
+                Início
+              </button>
+              <div className="h-px bg-border/30 mx-4" />
+              {CATEGORIES.map(cat => {
+                const teams = teamsByCategory(cat.key)
+                const isExpanded = expanded === cat.key
+                return (
+                  <div key={cat.key}>
+                    <button
+                      onClick={() => {
+                        if (cat.expandable && teams.length > 0) {
+                          setExpanded(isExpanded ? null : cat.key)
+                        } else {
+                          selectCategory(cat.key)
+                        }
+                      }}
+                      className={`w-full px-5 py-3.5 flex items-center justify-between text-[15px] font-medium transition-colors ${
+                        filter.category === cat.key && !filter.team ? 'text-gold bg-gold/10' : 'text-text hover:bg-elevated'
+                      }`}>
+                      <span>{cat.label}</span>
+                      {cat.expandable && teams.length > 0 && (
+                        isExpanded ? <ChevronDown className="w-4 h-4 text-muted" /> : <ChevronRight className="w-4 h-4 text-muted" />
+                      )}
+                    </button>
+                    {isExpanded && teams.map(team => (
+                      <button key={team} onClick={() => selectTeam(cat.key, team)}
+                        className={`w-full px-8 py-2.5 text-left text-[14px] transition-colors ${
+                          filter.team === team ? 'text-gold bg-gold/10 font-medium' : 'text-muted hover:text-text hover:bg-elevated'
+                        }`}>
+                        {team}
+                      </button>
+                    ))}
+                    {isExpanded && (
+                      <button onClick={() => selectCategory(cat.key)}
+                        className="w-full px-8 py-2.5 text-left text-[13px] text-gold hover:bg-elevated transition-colors">
+                        Ver todos ({products.filter(p => p.category === cat.key).length})
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

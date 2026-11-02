@@ -122,6 +122,7 @@ function ProductsManager() {
       old_price: editing.old_price ? Number(editing.old_price) : null,
       cost_price: Number(editing.cost_price) || 0,
       image_url: editing.image_url || '',
+      images: editing.images || [],
       sizes: editing.sizes || ['P', 'M', 'G', 'GG'],
       in_stock: editing.in_stock ?? true,
       stock_quantity: Number(editing.stock_quantity) || 0,
@@ -175,6 +176,19 @@ function ProductsManager() {
           </div>
         ))}
 
+        {/* Fotos extras (galeria) */}
+        <div>
+          <label className="text-[12px] text-muted block mb-1">Fotos extras (URLs separadas por vírgula)</label>
+          <input
+            type="text"
+            value={(editing.images || []).join(', ')}
+            onChange={e => setEditing({ ...editing, images: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+            placeholder="url1, url2, url3..."
+            className="w-full h-10 px-3 rounded-lg bg-elevated border border-border text-text text-[14px] focus:outline-none focus:border-gold"
+          />
+          <p className="text-[10px] text-muted mt-0.5">A foto principal (acima) + essas formam a galeria com swipe</p>
+        </div>
+
         {/* Categoria */}
         <div>
           <label className="text-[12px] text-muted block mb-1">Categoria</label>
@@ -186,6 +200,8 @@ function ProductsManager() {
             <option value="Nacional">Nacional</option>
             <option value="Internacional">Internacional</option>
             <option value="Seleção">Seleção</option>
+            <option value="Feminina">Feminina</option>
+            <option value="Retrô">Retrô</option>
           </select>
         </div>
 

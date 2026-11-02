@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Product, StoreConfig } from '../lib/types'
-import { ChevronLeft, Share2, Check, Clock } from 'lucide-react'
+import { ChevronLeft, Share2, Check, Clock, ChevronRight as ChevRight } from 'lucide-react'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -10,6 +10,8 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<Product | null>(null)
   const [config, setConfig] = useState<StoreConfig | null>(null)
   const [selectedSize, setSelectedSize] = useState('')
+  const [imgIdx, setImgIdx] = useState(0)
+  const touchStart = useRef(0)
 
   useEffect(() => {
     if (!id) return
@@ -30,33 +32,80 @@ export default function ProductDetail() {
     </div>
   )
 
+  const allImages = [
+    ...(product.image_url ? [product.image_url] : []),
+    ...(product.images || []),
+  ].filter((v, i, a) => a.indexOf(v) === i)
+
+  const currentImg = allImages[imgIdx] || 'https://via.placeholder.com/390x390/242424/999999?text=Camisa'
+
+  function handleShare() {
+    const url = window.location.href
+    const text = `${product!.name} — ${product!.team}\n${url}`
+    if (navigator.share) {
+      navigator.share({ title: product!.name, text: product!.team, url }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(text).catch(() => {})
+    }
+  }
+
+  function swipeStart(x: number) { touchStart.current = x }
+  function swipeEnd(x: number) {
+    const diff = touchStart.current - x
+    if (Math.abs(diff) < 50) return
+    if (diff > 0 && imgIdx < allImages.length - 1) setImgIdx(i => i + 1)
+    if (diff < 0 && imgIdx > 0) setImgIdx(i => i - 1)
+  }
+
   const whatsappMsg = encodeURIComponent(
     `Olá! Tenho interesse na camisa ${product.team} - ${product.name}, tamanho ${selectedSize}. Vi no catálogo online.`
   )
   const whatsappUrl = `https://wa.me/${config?.whatsapp || '5518997136772'}?text=${whatsappMsg}`
 
   return (
-    <div className="min-h-screen bg-bg flex justify-center">
+    <div className="min-h-screen bg-bg flex justify-center overflow-x-hidden">
       <div className="w-full max-w-[390px] min-h-screen bg-bg flex flex-col relative">
         <header className="sticky top-0 z-40 bg-bg h-[56px] px-4 flex items-center justify-between">
           <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center text-text hover:opacity-80 transition-opacity">
             <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
           </button>
           <h1 className="font-bold text-[17px] text-text">Detalhes</h1>
-          <button className="w-8 h-8 flex items-center justify-end text-text hover:opacity-80">
+          <button onClick={handleShare} className="w-8 h-8 flex items-center justify-end text-text hover:opacity-80">
             <Share2 className="w-5 h-5" />
           </button>
         </header>
 
         <main className="flex-1 pb-[110px]">
-          <div className="w-full h-[390px] bg-card overflow-hidden">
-            <img src={product.image_url || 'https://via.placeholder.com/390x390/242424/999999?text=Camisa'} alt={product.name} className="w-full h-full object-cover" />
+          {/* Galeria com swipe */}
+          <div className="w-full h-[390px] bg-card overflow-hidden relative select-none"
+            onTouchStart={e => swipeStart(e.touches[0].clientX)}
+            onTouchEnd={e => swipeEnd(e.changedTouches[0].clientX)}>
+            <img src={currentImg} alt={product.name} className="w-full h-full object-cover" draggable={false} />
+            {allImages.length > 1 && imgIdx > 0 && (
+              <button onClick={() => setImgIdx(i => i - 1)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/60 backdrop-blur-sm flex items-center justify-center text-text">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
+            {allImages.length > 1 && imgIdx < allImages.length - 1 && (
+              <button onClick={() => setImgIdx(i => i + 1)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-bg/60 backdrop-blur-sm flex items-center justify-center text-text">
+                <ChevRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
-          <div className="flex justify-center gap-1.5 mt-3">
-            <span className="w-5 h-1.5 bg-gold rounded-full" />
-            <span className="w-1.5 h-1.5 bg-border rounded-full" />
-            <span className="w-1.5 h-1.5 bg-border rounded-full" />
-          </div>
+          {allImages.length > 1 && (
+            <div className="flex justify-center gap-1.5 mt-3">
+              {allImages.map((_, i) => (
+                <span key={i} className={`h-1.5 rounded-full transition-all ${i === imgIdx ? 'bg-gold w-5' : 'bg-border w-1.5'}`} />
+              ))}
+            </div>
+          )}
+          {allImages.length <= 1 && (
+            <div className="flex justify-center gap-1.5 mt-3">
+              <span className="w-5 h-1.5 bg-gold rounded-full" />
+            </div>
+          )}
 
           <section className="px-4 mt-4">
             <div className="text-gold font-bold text-[11px] uppercase tracking-[2px]">{product.team}</div>
