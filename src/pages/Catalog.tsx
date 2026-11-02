@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Product, StoreConfig } from '../lib/types'
-import { Search, ChevronRight, ShieldCheck, Star, Check, Clock } from 'lucide-react'
+import { Search, ShieldCheck, Star, Check, Clock } from 'lucide-react'
 
 export default function Catalog() {
   const [products, setProducts] = useState<Product[]>([])
