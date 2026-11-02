@@ -42,4 +42,5 @@ export interface StoreConfig {
   profile_image: string | null
   cover_image: string | null
   banner_images: string[]
+  sales_count: number
 }

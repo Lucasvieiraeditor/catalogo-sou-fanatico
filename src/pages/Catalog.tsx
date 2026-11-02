@@ -2,16 +2,24 @@ import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Product, StoreConfig } from '../lib/types'
-import { Search, ShieldCheck, Star, Check, Clock } from 'lucide-react'
+import { Search, ShieldCheck, Star, Check, Clock, Menu, X, ChevronRight, ChevronDown } from 'lucide-react'
 
-const CATEGORIES = ['Todos', 'Nacional', 'Internacional', 'Seleção']
+const CATEGORIES = [
+  { key: 'Nacional', label: 'Times Nacionais', expandable: true },
+  { key: 'Internacional', label: 'Times Internacionais', expandable: true },
+  { key: 'Seleção', label: 'Seleções', expandable: true },
+  { key: 'Feminina', label: 'Femininas', expandable: false },
+  { key: 'Retrô', label: 'Retrô', expandable: false },
+]
 
 export default function Catalog() {
   const [products, setProducts] = useState<Product[]>([])
   const [config, setConfig] = useState<StoreConfig | null>(null)
-  const [filter, setFilter] = useState('Todos')
+  const [filter, setFilter] = useState<{ category?: string; team?: string }>({})
   const [search, setSearch] = useState('')
   const [bannerIdx, setBannerIdx] = useState(0)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [expanded, setExpanded] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -29,25 +37,49 @@ export default function Catalog() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [banners.length])
 
+  const teamsByCategory = (cat: string) =>
+    [...new Set(products.filter(p => p.category === cat).map(p => p.team))].sort()
+
   const filtered = products.filter(p => {
-    if (filter !== 'Todos' && p.category !== filter) return false
+    if (filter.team && p.team !== filter.team) return false
+    if (filter.category && !filter.team && p.category !== filter.category) return false
     if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.team.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
   const whatsappUrl = config ? `https://wa.me/${config.whatsapp}` : '#'
+  const salesCount = config?.sales_count || 150
+
+  function selectCategory(cat: string) {
+    setFilter({ category: cat })
+    setMenuOpen(false)
+    setExpanded(null)
+  }
+
+  function selectTeam(category: string, team: string) {
+    setFilter({ category, team })
+    setMenuOpen(false)
+    setExpanded(null)
+  }
+
+  function goHome() {
+    setFilter({})
+    setMenuOpen(false)
+    setExpanded(null)
+  }
+
+  const filterLabel = filter.team || (filter.category ? CATEGORIES.find(c => c.key === filter.category)?.label : null)
 
   return (
     <div className="min-h-screen bg-bg flex justify-center">
       <div className="w-full max-w-[430px] min-h-screen bg-bg flex flex-col relative pb-[72px]">
 
-        {/* === HEADER WHATSAPP-STYLE === */}
+        {/* === HEADER COM BANNER === */}
         <section className="relative">
-          {/* Banner / Cover com carrossel */}
           <div className="h-[200px] w-full relative overflow-hidden bg-card">
             {banners.length > 0 ? banners.map((url, i) => (
               <img key={i} src={url} alt=""
-                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+                className="absolute inset-0 w-full h-full object-contain bg-black/40 transition-opacity duration-700"
                 style={{ opacity: i === bannerIdx ? 1 : 0 }} />
             )) : (
               <div className="w-full h-full flex items-center justify-center"
@@ -56,6 +88,13 @@ export default function Catalog() {
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-bg/90 via-bg/30 to-transparent" />
+
+            {/* Hamburger */}
+            <button onClick={() => setMenuOpen(true)}
+              className="absolute top-3 right-3 z-20 w-10 h-10 rounded-full bg-bg/70 backdrop-blur-sm flex items-center justify-center text-text hover:bg-bg/90 transition-colors">
+              <Menu className="w-5 h-5" />
+            </button>
+
             {banners.length > 1 && (
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                 {banners.map((_, i) => (
@@ -65,7 +104,6 @@ export default function Catalog() {
             )}
           </div>
 
-          {/* Avatar grande sobrepondo o banner */}
           <div className="absolute left-1/2 -translate-x-1/2 -bottom-[48px] z-10">
             <div className="w-[96px] h-[96px] rounded-full p-[3px] bg-bg shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
               <div className="w-full h-full rounded-full border-[2.5px] border-gold overflow-hidden bg-card">
@@ -81,8 +119,8 @@ export default function Catalog() {
 
         {/* === PERFIL === */}
         <section className="px-5 text-center mt-[56px]">
-          <h2 className="font-bold text-[18px] text-text tracking-tight leading-tight">
-            SOU FANÁTICO | Camisas De Time
+          <h2 className="font-bold text-[20px] text-text tracking-tight leading-tight">
+            SOU FANÁTICO
           </h2>
           <div className="flex items-center justify-center gap-1.5 mt-1">
             <Check className="w-3 h-3 text-gold" />
@@ -96,20 +134,18 @@ export default function Catalog() {
             <span className="bg-elevated border border-gold/60 text-gold font-medium text-[10px] px-3 py-[5px] rounded-full">
               Premium 1.1
             </span>
-            <span className="bg-elevated border border-border text-text font-medium text-[10px] px-3 py-[5px] rounded-full">
-              Nacional 1ª Linha
-            </span>
           </div>
 
           <div className="flex items-center justify-center gap-6 mt-4">
             <div className="flex flex-col items-center">
-              <span className="font-bold text-[20px] text-gold leading-none">150+</span>
+              <span className="font-bold text-[20px] text-gold leading-none">{salesCount}+</span>
               <span className="text-[10px] text-muted mt-1">vendidas</span>
             </div>
             <div className="w-px h-8 bg-border/60" />
             <div className="flex flex-col items-center">
-              <span className="font-bold text-[20px] text-gold leading-none">{new Set(products.map(p => p.team)).size || 6}</span>
-              <span className="text-[10px] text-muted mt-1">times</span>
+              <span className="font-bold text-[14px] text-gold leading-none">🚚</span>
+              <span className="text-[10px] text-muted mt-1">entrega grátis</span>
+              <span className="text-[9px] text-muted">na região</span>
             </div>
             <div className="w-px h-8 bg-border/60" />
             <div className="flex flex-col items-center">
@@ -133,7 +169,7 @@ export default function Catalog() {
           </div>
         </section>
 
-        {/* === BUSCA + FILTROS POR CATEGORIA === */}
+        {/* === BUSCA + FILTRO ATIVO === */}
         <section className="px-4 mt-4">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-[16px] h-[16px] text-muted pointer-events-none" />
@@ -146,16 +182,16 @@ export default function Catalog() {
             />
           </div>
 
-          <div className="mt-3 flex items-center gap-1.5">
-            {CATEGORIES.map(c => (
-              <button key={c} onClick={() => setFilter(c)}
-                className={`shrink-0 px-4 py-[7px] rounded-full text-[12px] transition-all active:scale-95 ${
-                  filter === c ? 'bg-gold text-bg font-bold' : 'bg-elevated text-muted font-medium border border-border/50 hover:text-text'
-                }`}>
-                {c}
-              </button>
-            ))}
-          </div>
+          {filterLabel && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="bg-gold/15 border border-gold/40 text-gold font-medium text-[12px] px-3 py-[5px] rounded-full flex items-center gap-1.5">
+                {filterLabel}
+                <button onClick={goHome} className="hover:text-text transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            </div>
+          )}
 
           <p className="text-[11px] text-muted mt-2">{filtered.length} camisas encontradas</p>
         </section>
@@ -199,6 +235,9 @@ export default function Catalog() {
               </Link>
             ))}
           </div>
+          {filtered.length === 0 && (
+            <p className="text-center text-muted text-[14px] mt-8">Nenhuma camisa encontrada.</p>
+          )}
         </section>
 
         {/* === FOOTER WHATSAPP === */}
@@ -211,6 +250,83 @@ export default function Catalog() {
             </a>
           </div>
         </footer>
+
+        {/* === MENU DRAWER === */}
+        {menuOpen && (
+          <div className="fixed inset-0 z-[60] flex justify-center">
+            <div className="w-full max-w-[430px] relative">
+              <div className="absolute inset-0 bg-black/50" onClick={() => { setMenuOpen(false); setExpanded(null) }} />
+              <div className="absolute top-0 left-0 w-[80%] max-w-[320px] h-full bg-card animate-slide-in overflow-y-auto">
+                {/* Header do menu */}
+                <div className="bg-gold/90 px-4 py-4 flex items-center justify-between">
+                  <h2 className="font-bold text-[18px] text-bg">SOU FANÁTICO</h2>
+                  <button onClick={() => { setMenuOpen(false); setExpanded(null) }}
+                    className="w-8 h-8 rounded-full bg-bg/20 flex items-center justify-center text-bg">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Items */}
+                <div className="py-2">
+                  {/* Início */}
+                  <button onClick={goHome}
+                    className={`w-full px-5 py-3.5 text-left text-[15px] font-medium transition-colors ${
+                      !filter.category ? 'text-gold bg-gold/10' : 'text-text hover:bg-elevated'
+                    }`}>
+                    Início
+                  </button>
+
+                  <div className="h-px bg-border/30 mx-4" />
+
+                  {/* Categorias */}
+                  {CATEGORIES.map(cat => {
+                    const teams = teamsByCategory(cat.key)
+                    const isExpanded = expanded === cat.key
+
+                    return (
+                      <div key={cat.key}>
+                        <button
+                          onClick={() => {
+                            if (cat.expandable && teams.length > 0) {
+                              setExpanded(isExpanded ? null : cat.key)
+                            } else {
+                              selectCategory(cat.key)
+                            }
+                          }}
+                          className={`w-full px-5 py-3.5 flex items-center justify-between text-[15px] font-medium transition-colors ${
+                            filter.category === cat.key && !filter.team ? 'text-gold bg-gold/10' : 'text-text hover:bg-elevated'
+                          }`}>
+                          <span>{cat.label}</span>
+                          {cat.expandable && teams.length > 0 && (
+                            isExpanded ? <ChevronDown className="w-4 h-4 text-muted" /> : <ChevronRight className="w-4 h-4 text-muted" />
+                          )}
+                        </button>
+
+                        {/* Sub-items: times */}
+                        {isExpanded && teams.map(team => (
+                          <button key={team} onClick={() => selectTeam(cat.key, team)}
+                            className={`w-full px-8 py-2.5 text-left text-[14px] transition-colors ${
+                              filter.team === team ? 'text-gold bg-gold/10 font-medium' : 'text-muted hover:text-text hover:bg-elevated'
+                            }`}>
+                            {team}
+                          </button>
+                        ))}
+
+                        {/* Ver todos da categoria */}
+                        {isExpanded && (
+                          <button onClick={() => selectCategory(cat.key)}
+                            className="w-full px-8 py-2.5 text-left text-[13px] text-gold hover:bg-elevated transition-colors">
+                            Ver todos ({products.filter(p => p.category === cat.key).length})
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Product, Order, StoreConfig } from '../lib/types'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Plus, Pencil, Trash2, TrendingUp, DollarSign, Archive, Calendar, Image } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, Plus, Pencil, Trash2, TrendingUp, DollarSign, Archive, Calendar, Image, Settings } from 'lucide-react'
 
 export default function Admin() {
   const navigate = useNavigate()
@@ -32,6 +32,7 @@ export default function Admin() {
           { to: '/admin/produtos', icon: Package, label: 'Produtos' },
           { to: '/admin/pedidos', icon: ShoppingCart, label: 'Pedidos' },
           { to: '/admin/banners', icon: Image, label: 'Banners' },
+          { to: '/admin/config', icon: Settings, label: 'Config' },
         ].map(({ to, end, icon: Icon, label }) => (
           <NavLink key={to} to={to} end={end}
             className={({ isActive }) => `flex items-center gap-1.5 px-3 py-3 text-[13px] font-medium border-b-2 transition-colors shrink-0 ${
@@ -48,6 +49,7 @@ export default function Admin() {
           <Route path="produtos" element={<ProductsManager />} />
           <Route path="pedidos" element={<OrdersManager />} />
           <Route path="banners" element={<BannersManager />} />
+          <Route path="config" element={<ConfigManager />} />
         </Routes>
       </main>
     </div>
@@ -357,6 +359,79 @@ function BannersManager() {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function ConfigManager() {
+  const [salesCount, setSalesCount] = useState(150)
+  const [tagline, setTagline] = useState('')
+  const [ownerName, setOwnerName] = useState('')
+  const [profileImage, setProfileImage] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    supabase.from('store_config').select('*').single().then(({ data }) => {
+      if (data) {
+        setSalesCount(data.sales_count || 150)
+        setTagline(data.tagline || '')
+        setOwnerName(data.owner_name || '')
+        setProfileImage(data.profile_image || '')
+      }
+    })
+  }, [])
+
+  async function save() {
+    setSaving(true)
+    await supabase.from('store_config').update({
+      sales_count: salesCount,
+      tagline,
+      owner_name: ownerName,
+      profile_image: profileImage,
+    }).eq('id', 1)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="font-bold text-[17px] text-text">Configurações do Catálogo</h2>
+
+      <div>
+        <label className="text-[12px] text-muted block mb-1">Seu nome</label>
+        <input type="text" value={ownerName} onChange={e => setOwnerName(e.target.value)}
+          className="w-full h-10 px-3 rounded-lg bg-elevated border border-border text-text text-[14px] focus:outline-none focus:border-gold" />
+      </div>
+
+      <div>
+        <label className="text-[12px] text-muted block mb-1">Frase do perfil (tagline)</label>
+        <input type="text" value={tagline} onChange={e => setTagline(e.target.value)}
+          className="w-full h-10 px-3 rounded-lg bg-elevated border border-border text-text text-[14px] focus:outline-none focus:border-gold" />
+      </div>
+
+      <div>
+        <label className="text-[12px] text-muted block mb-1">Quantidade de camisas vendidas</label>
+        <input type="number" value={salesCount} onChange={e => setSalesCount(Number(e.target.value))}
+          className="w-full h-10 px-3 rounded-lg bg-elevated border border-border text-text text-[14px] focus:outline-none focus:border-gold" />
+        <p className="text-[11px] text-muted mt-1">Aparece como "{salesCount}+ vendidas" no catálogo</p>
+      </div>
+
+      <div>
+        <label className="text-[12px] text-muted block mb-1">URL da foto de perfil</label>
+        <input type="text" value={profileImage} onChange={e => setProfileImage(e.target.value)}
+          placeholder="https://..."
+          className="w-full h-10 px-3 rounded-lg bg-elevated border border-border text-text text-[14px] focus:outline-none focus:border-gold" />
+        {profileImage && (
+          <img src={profileImage} alt="" className="w-16 h-16 rounded-full object-cover mt-2 border-2 border-gold" />
+        )}
+      </div>
+
+      <button onClick={save} disabled={saving}
+        className="w-full h-10 bg-gold text-bg font-bold text-[14px] rounded-lg disabled:opacity-50">
+        {saving ? 'Salvando...' : saved ? 'Salvo ✓' : 'Salvar Configurações'}
+      </button>
     </div>
   )
 }

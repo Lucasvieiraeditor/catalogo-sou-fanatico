@@ -26,3 +26,6 @@ body {
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes slide-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+.animate-slide-in { animation: slide-in 0.25s ease-out; }
