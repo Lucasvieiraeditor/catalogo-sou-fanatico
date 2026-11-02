@@ -15,6 +15,7 @@ export interface Product {
   stock_quantity: number
   delivery_date: string | null
   is_new: boolean
+  category: string
   active: boolean
   created_at: string
 }
@@ -40,4 +41,5 @@ export interface StoreConfig {
   tagline: string
   profile_image: string | null
   cover_image: string | null
+  banner_images: string[]
 }

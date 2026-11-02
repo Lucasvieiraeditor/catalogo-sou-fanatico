@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Product, StoreConfig } from '../lib/types'
 import { Search, ShieldCheck, Star, Check, Clock } from 'lucide-react'
+
+const CATEGORIES = ['Todos', 'Nacional', 'Internacional', 'Seleção']
 
 export default function Catalog() {
   const [products, setProducts] = useState<Product[]>([])
   const [config, setConfig] = useState<StoreConfig | null>(null)
   const [filter, setFilter] = useState('Todos')
   const [search, setSearch] = useState('')
+  const [bannerIdx, setBannerIdx] = useState(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     supabase.from('products').select('*').eq('active', true).order('created_at', { ascending: false })
@@ -17,10 +21,16 @@ export default function Catalog() {
       .then(({ data }) => { if (data) setConfig(data) })
   }, [])
 
-  const teams = ['Todos', ...new Set(products.map(p => p.team))]
+  const banners = config?.banner_images?.length ? config.banner_images : []
+
+  useEffect(() => {
+    if (banners.length <= 1) return
+    intervalRef.current = setInterval(() => setBannerIdx(i => (i + 1) % banners.length), 3500)
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+  }, [banners.length])
 
   const filtered = products.filter(p => {
-    if (filter !== 'Todos' && p.team !== filter) return false
+    if (filter !== 'Todos' && p.category !== filter) return false
     if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.team.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
@@ -31,44 +41,50 @@ export default function Catalog() {
     <div className="min-h-screen bg-bg flex justify-center">
       <div className="w-full max-w-[430px] min-h-screen bg-bg flex flex-col relative pb-[72px]">
 
-        {/* === HEADER / CAPA === */}
+        {/* === HEADER WHATSAPP-STYLE === */}
         <section className="relative">
-          <div className="h-[180px] w-full relative flex flex-col items-center justify-center overflow-hidden"
-            style={{ backgroundImage: 'radial-gradient(circle at center, #242424 0%, #1A1A1A 100%)' }}>
-            <div className="absolute top-0 left-0 w-20 h-20 opacity-30">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                {[16,32,48,64].map(y => <line key={y} x1="0" y1={y} x2={y} y2="0" stroke="#2A2A2A" strokeWidth="1.5"/>)}
-              </svg>
-            </div>
-            <div className="absolute top-0 right-0 w-20 h-20 opacity-30">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                {[16,32,48,64].map(y => <line key={y} x1="80" y1={y} x2={80-y} y2="0" stroke="#2A2A2A" strokeWidth="1.5"/>)}
-              </svg>
-            </div>
-            <h1 className="font-black text-[26px] leading-tight tracking-wider text-gold uppercase drop-shadow-md">
-              {config?.store_name || 'SOU FANÁTICO'}
-            </h1>
-            <p className="font-bold text-[10px] text-text uppercase tracking-[4px] mt-0.5 opacity-90">
-              CAMISAS DE TIME
-            </p>
+          {/* Banner / Cover com carrossel */}
+          <div className="h-[200px] w-full relative overflow-hidden bg-card">
+            {banners.length > 0 ? banners.map((url, i) => (
+              <img key={i} src={url} alt=""
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+                style={{ opacity: i === bannerIdx ? 1 : 0 }} />
+            )) : (
+              <div className="w-full h-full flex items-center justify-center"
+                style={{ backgroundImage: 'radial-gradient(circle at center, #242424 0%, #1A1A1A 100%)' }}>
+                <h1 className="font-black text-[28px] tracking-wider text-gold/30 uppercase">SOU FANÁTICO</h1>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-bg/90 via-bg/30 to-transparent" />
+            {banners.length > 1 && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                {banners.map((_, i) => (
+                  <span key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === bannerIdx ? 'bg-gold w-4' : 'bg-white/40'}`} />
+                ))}
+              </div>
+            )}
           </div>
-          <div className="absolute left-1/2 -translate-x-1/2 -bottom-[36px] z-10">
-            <div className="w-[72px] h-[72px] rounded-full p-[2.5px] bg-gold shadow-[0_4px_12px_rgba(0,0,0,0.6)] flex items-center justify-center">
-              <img
-                src={config?.profile_image || 'https://via.placeholder.com/72x72/1A1A1A/D4A017?text=D'}
-                alt={config?.owner_name || 'Diego'}
-                className="w-full h-full object-cover rounded-full bg-card"
-              />
+
+          {/* Avatar grande sobrepondo o banner */}
+          <div className="absolute left-1/2 -translate-x-1/2 -bottom-[48px] z-10">
+            <div className="w-[96px] h-[96px] rounded-full p-[3px] bg-bg shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
+              <div className="w-full h-full rounded-full border-[2.5px] border-gold overflow-hidden bg-card">
+                <img
+                  src={config?.profile_image || 'https://via.placeholder.com/96x96/1A1A1A/D4A017?text=D'}
+                  alt={config?.owner_name || 'Diego'}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
           </div>
         </section>
 
-        {/* === PERFIL COMPACTO === */}
-        <section className="px-5 text-center mt-[44px]">
+        {/* === PERFIL === */}
+        <section className="px-5 text-center mt-[56px]">
           <h2 className="font-bold text-[18px] text-text tracking-tight leading-tight">
-            {config?.store_name || 'SOU FANÁTICO'}
+            SOU FANÁTICO | Camisas De Time
           </h2>
-          <div className="flex items-center justify-center gap-1.5 mt-0.5">
+          <div className="flex items-center justify-center gap-1.5 mt-1">
             <Check className="w-3 h-3 text-gold" />
             <span className="font-medium text-[13px] text-muted">{config?.owner_name || 'Diego'}</span>
           </div>
@@ -76,7 +92,6 @@ export default function Catalog() {
             "{config?.tagline || 'Aqui seu manto é sagrado!'}"
           </p>
 
-          {/* Badges */}
           <div className="flex items-center justify-center gap-2 mt-2.5">
             <span className="bg-elevated border border-gold/60 text-gold font-medium text-[10px] px-3 py-[5px] rounded-full">
               Premium 1.1
@@ -86,7 +101,6 @@ export default function Catalog() {
             </span>
           </div>
 
-          {/* Métricas */}
           <div className="flex items-center justify-center gap-6 mt-4">
             <div className="flex flex-col items-center">
               <span className="font-bold text-[20px] text-gold leading-none">150+</span>
@@ -94,7 +108,7 @@ export default function Catalog() {
             </div>
             <div className="w-px h-8 bg-border/60" />
             <div className="flex flex-col items-center">
-              <span className="font-bold text-[20px] text-gold leading-none">{teams.length - 1 || 6}</span>
+              <span className="font-bold text-[20px] text-gold leading-none">{new Set(products.map(p => p.team)).size || 6}</span>
               <span className="text-[10px] text-muted mt-1">times</span>
             </div>
             <div className="w-px h-8 bg-border/60" />
@@ -107,7 +121,6 @@ export default function Catalog() {
             </div>
           </div>
 
-          {/* Compra segura — compacto */}
           <div className="flex items-center justify-center gap-4 mt-4 py-3 border-y border-border/40">
             <ShieldCheck className="w-4 h-4 text-stock shrink-0" />
             <div className="flex items-center gap-3 text-[11px] text-muted">
@@ -120,7 +133,7 @@ export default function Catalog() {
           </div>
         </section>
 
-        {/* === BUSCA + FILTROS === */}
+        {/* === BUSCA + FILTROS POR CATEGORIA === */}
         <section className="px-4 mt-4">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-[16px] h-[16px] text-muted pointer-events-none" />
@@ -133,13 +146,13 @@ export default function Catalog() {
             />
           </div>
 
-          <div className="mt-3 -mx-4 px-4 overflow-x-auto no-scrollbar flex items-center gap-1.5">
-            {teams.map(t => (
-              <button key={t} onClick={() => setFilter(t)}
+          <div className="mt-3 flex items-center gap-1.5">
+            {CATEGORIES.map(c => (
+              <button key={c} onClick={() => setFilter(c)}
                 className={`shrink-0 px-4 py-[7px] rounded-full text-[12px] transition-all active:scale-95 ${
-                  filter === t ? 'bg-gold text-bg font-bold' : 'bg-elevated text-muted font-medium border border-border/50 hover:text-text'
+                  filter === c ? 'bg-gold text-bg font-bold' : 'bg-elevated text-muted font-medium border border-border/50 hover:text-text'
                 }`}>
-                {t}
+                {c}
               </button>
             ))}
           </div>

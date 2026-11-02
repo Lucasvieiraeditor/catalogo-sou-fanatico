@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import type { Product, Order } from '../lib/types'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Plus, Pencil, Trash2, TrendingUp, DollarSign, Archive, Calendar } from 'lucide-react'
+import type { Product, Order, StoreConfig } from '../lib/types'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, Plus, Pencil, Trash2, TrendingUp, DollarSign, Archive, Calendar, Image } from 'lucide-react'
 
 export default function Admin() {
   const navigate = useNavigate()
@@ -31,6 +31,7 @@ export default function Admin() {
           { to: '/admin', end: true, icon: LayoutDashboard, label: 'Dashboard' },
           { to: '/admin/produtos', icon: Package, label: 'Produtos' },
           { to: '/admin/pedidos', icon: ShoppingCart, label: 'Pedidos' },
+          { to: '/admin/banners', icon: Image, label: 'Banners' },
         ].map(({ to, end, icon: Icon, label }) => (
           <NavLink key={to} to={to} end={end}
             className={({ isActive }) => `flex items-center gap-1.5 px-3 py-3 text-[13px] font-medium border-b-2 transition-colors shrink-0 ${
@@ -46,6 +47,7 @@ export default function Admin() {
           <Route index element={<Dashboard />} />
           <Route path="produtos" element={<ProductsManager />} />
           <Route path="pedidos" element={<OrdersManager />} />
+          <Route path="banners" element={<BannersManager />} />
         </Routes>
       </main>
     </div>
@@ -113,6 +115,7 @@ function ProductsManager() {
       type: editing.type || 'Camisa',
       quality: editing.quality || 'Premium 1.1',
       material: editing.material || 'Poliéster',
+      category: editing.category || 'Nacional',
       price: Number(editing.price) || 0,
       old_price: editing.old_price ? Number(editing.old_price) : null,
       cost_price: Number(editing.cost_price) || 0,
@@ -169,6 +172,21 @@ function ProductsManager() {
             />
           </div>
         ))}
+
+        {/* Categoria */}
+        <div>
+          <label className="text-[12px] text-muted block mb-1">Categoria</label>
+          <select
+            value={editing.category || 'Nacional'}
+            onChange={e => setEditing({ ...editing, category: e.target.value })}
+            className="w-full h-10 px-3 rounded-lg bg-elevated border border-border text-text text-[14px] focus:outline-none focus:border-gold"
+          >
+            <option value="Nacional">Nacional</option>
+            <option value="Internacional">Internacional</option>
+            <option value="Seleção">Seleção</option>
+          </select>
+        </div>
+
         <div className="flex gap-2">
           <label className="flex items-center gap-2 text-[13px] text-text">
             <input type="checkbox" checked={editing.in_stock ?? true} onChange={e => setEditing({ ...editing, in_stock: e.target.checked })} className="accent-gold" />
@@ -201,7 +219,7 @@ function ProductsManager() {
     <div>
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-bold text-[17px] text-text">{products.length} Produtos</h2>
-        <button onClick={() => setEditing({ sizes: ['P', 'M', 'G', 'GG'], in_stock: true, active: true, is_new: false })}
+        <button onClick={() => setEditing({ sizes: ['P', 'M', 'G', 'GG'], in_stock: true, active: true, is_new: false, category: 'Nacional' })}
           className="h-9 px-4 bg-gold text-bg font-bold text-[13px] rounded-lg flex items-center gap-1.5">
           <Plus className="w-4 h-4" /> Novo
         </button>
@@ -211,7 +229,7 @@ function ProductsManager() {
           <div key={p.id} className="bg-card border border-border rounded-xl p-3 flex gap-3 items-center">
             <img src={p.image_url || 'https://via.placeholder.com/56x56/242424/999999?text=C'} alt="" className="w-14 h-14 rounded-lg object-cover bg-elevated shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] text-gold font-bold uppercase">{p.team}</p>
+              <p className="text-[10px] text-gold font-bold uppercase">{p.team} <span className="text-muted font-medium">• {p.category}</span></p>
               <p className="text-[14px] font-bold text-text truncate">{p.name}</p>
               <p className="text-[12px] text-muted">R$ {p.price} | Custo: R$ {p.cost_price}</p>
             </div>
@@ -272,6 +290,70 @@ function OrdersManager() {
                 </button>
               ))}
             </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function BannersManager() {
+  const [config, setConfig] = useState<StoreConfig | null>(null)
+  const [newUrl, setNewUrl] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    supabase.from('store_config').select('*').single()
+      .then(({ data }) => { if (data) setConfig(data) })
+  }, [])
+
+  const banners = config?.banner_images || []
+
+  async function addBanner() {
+    if (!newUrl.trim()) return
+    setLoading(true)
+    const updated = [...banners, newUrl.trim()]
+    await supabase.from('store_config').update({ banner_images: updated }).eq('id', 1)
+    setConfig(config ? { ...config, banner_images: updated } : null)
+    setNewUrl('')
+    setLoading(false)
+  }
+
+  async function removeBanner(idx: number) {
+    const updated = banners.filter((_, i) => i !== idx)
+    await supabase.from('store_config').update({ banner_images: updated }).eq('id', 1)
+    setConfig(config ? { ...config, banner_images: updated } : null)
+  }
+
+  return (
+    <div>
+      <h2 className="font-bold text-[17px] text-text mb-1">Banners do Catálogo</h2>
+      <p className="text-[12px] text-muted mb-4">Fotos que aparecem atrás do perfil, passando automaticamente. Recomendado: 4 fotos.</p>
+
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          value={newUrl}
+          onChange={e => setNewUrl(e.target.value)}
+          placeholder="Cole a URL da imagem..."
+          className="flex-1 h-10 px-3 rounded-lg bg-elevated border border-border text-text text-[14px] focus:outline-none focus:border-gold"
+        />
+        <button onClick={addBanner} disabled={loading}
+          className="h-10 px-4 bg-gold text-bg font-bold text-[13px] rounded-lg flex items-center gap-1.5 disabled:opacity-50">
+          <Plus className="w-4 h-4" /> Adicionar
+        </button>
+      </div>
+
+      {banners.length === 0 && <p className="text-[14px] text-muted">Nenhum banner. Adicione fotos acima.</p>}
+
+      <div className="space-y-2">
+        {banners.map((url, i) => (
+          <div key={i} className="bg-card border border-border rounded-xl p-2 flex gap-3 items-center">
+            <img src={url} alt="" className="w-20 h-12 rounded-lg object-cover bg-elevated shrink-0" />
+            <p className="text-[12px] text-muted flex-1 min-w-0 truncate">{url}</p>
+            <button onClick={() => removeBanner(i)} className="w-8 h-8 rounded-lg bg-elevated flex items-center justify-center text-text hover:text-danger shrink-0">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
           </div>
         ))}
       </div>
